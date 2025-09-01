@@ -1,0 +1,50 @@
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git files
+.git/
+.gitignore
+
+# Docker files (don't copy Docker stuff into Docker!)
+Dockerfile*
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Test files
+test_*.py
+tests/
+pytest.ini
+
+# Documentation
+README.md
+docs/
+
+# Large model cache (will download fresh in container)
+.cache/
+.huggingface/
+
+# Development files
+.env.local
+.env.development
