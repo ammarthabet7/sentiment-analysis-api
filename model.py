@@ -1,4 +1,4 @@
-from transformers import pipeline
+﻿from textblob import TextBlob
 import logging
 
 # Set up logging
@@ -8,56 +8,40 @@ logger = logging.getLogger(__name__)
 class SentimentAnalyzer:
     def __init__(self):
         """
-        Initialize the sentiment analysis model from Hugging Face
-  
+        Initialize the sentiment analysis using TextBlob
         """
-        try:
-            logger.info("Loading Hugging Face sentiment analysis model...")
-            
-            # Initialize the sentiment analysis pipeline
-            self.classifier = pipeline(
-                "sentiment-analysis",
-                model="cardiffnlp/twitter-roberta-base-sentiment-latest",
-                return_all_scores=True
-            )
-            
-            logger.info("Model loaded successfully!")
-            
-        except Exception as e:
-            logger.error(f"Error loading model: {e}")
-            raise e
-    
+        logger.info("Loading TextBlob sentiment analyzer...")
+        logger.info("TextBlob analyzer ready!")
+
     def analyze_sentiment(self, text: str):
         """
-        Analyze sentiment of input text
-        
-        Args:
-            text (str): Text to analyze
-            
-        Returns:
-            dict: Sentiment results with confidence scores
+        Analyze sentiment using TextBlob
         """
         try:
-            # Get prediction from the model
-            results = self.classifier(text)
+            blob = TextBlob(text)
+            polarity = blob.sentiment.polarity
             
-            # Extract the results (returns list of all scores)
-            sentiment_scores = results[0]  # First (and only) text result
+            # Convert polarity to readable sentiment
+            if polarity > 0.1:
+                sentiment = "positive"
+            elif polarity < -0.1:
+                sentiment = "negative"
+            else:
+                sentiment = "neutral"
             
-            # Find the highest confidence prediction
-            best_prediction = max(sentiment_scores, key=lambda x: x['score'])
+            # Convert polarity to confidence (0 to 1)
+            confidence = abs(polarity)
             
-            # Format the response
             return {
                 "text": text,
-                "sentiment": best_prediction['label'],
-                "confidence": round(best_prediction['score'], 4),
+                "sentiment": sentiment,
+                "confidence": round(confidence, 4),
                 "all_scores": {
-                    score['label']: round(score['score'], 4) 
-                    for score in sentiment_scores
+                    "positive": max(0, polarity),
+                    "negative": max(0, -polarity),
+                    "neutral": 1 - abs(polarity)
                 }
             }
-            
         except Exception as e:
             logger.error(f"Error during sentiment analysis: {e}")
             return {
@@ -67,16 +51,10 @@ class SentimentAnalyzer:
                 "error": str(e)
             }
 
-# Create a global instance (singleton pattern)
-# Why: We want to load the model only once when the app starts
+# Global instance
 sentiment_analyzer = None
 
 def get_sentiment_analyzer():
-    """
-    Get the sentiment analyzer instance
-    Returns:
-        SentimentAnalyzer: The sentiment analyzer instance
-    """
     global sentiment_analyzer
     if sentiment_analyzer is None:
         sentiment_analyzer = SentimentAnalyzer()
