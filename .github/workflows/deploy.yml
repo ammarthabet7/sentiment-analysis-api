@@ -109,7 +109,7 @@ jobs:
           sudo pkill -f "python main.py" || true
           
           # Wait a moment for graceful shutdown
-          sleep 3
+          sleep 5
           
           # Start new application
           echo "🚀 Starting new application..."
@@ -117,7 +117,7 @@ jobs:
           
           # Wait for application to start
           echo "⏳ Waiting for application to start..."
-          sleep 10
+          sleep 30
           
           # Test that application is healthy
           echo "🔍 Testing application health..."
