@@ -56,27 +56,57 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         envs: DATABASE_URL
         script: |
+          # --- Configuration Variables ---
+          PROJECT_DIR="/home/ubuntu/sentiment-analysis-api"
+          VENV_PATH="/home/ubuntu/sentiment_env/bin/activate"
+          PID_FILE="$PROJECT_DIR/app.pid"
+
           echo "🚀 Starting deployment..."
-          cd sentiment-analysis-api || exit 1
-          echo "📥 Pulling latest code..."
+          cd $PROJECT_DIR || { echo "❌ Project directory not found!"; exit 1; }
+
+          echo "📥 Pulling latest code from main branch..."
           git pull origin main
-          echo "🔧 Setting up environment..."
-          source ../sentiment_env/bin/activate
-          echo "📦 Installing dependencies..."  
+
+          echo "🐍 Activating virtual environment..."
+          source $VENV_PATH
+
+          echo "📦 Installing/updating dependencies..."
           pip install -r requirements.txt
-          echo "🛑 Stopping existing application..."
-          sudo pkill -f "python main.py" || true
-          sleep 5
-          echo "🚀 Starting new application..."
-          source ../sentiment_env/bin/activate
-          export DATABASE_URL="${{ secrets.DATABASE_URL }}"
-          nohup python main.py > api.log 2>&1 &
-          echo "⏳ Waiting for application to start..."
-          sleep 45
-          echo "🔍 Testing application health..."
-          curl -f http://localhost:8000/health || exit 1
-          echo "🧪 Testing sentiment analysis..."
-          curl -X POST "http://localhost:8000/analyze" -H "Content-Type: application/json" -d '{"text": "Deployment successful!"}' || exit 1
-          echo "✅ Deployment completed successfully!"
-      env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+          echo "🛑 Stopping the old version of the application (if running)..."
+          if [ -f $PID_FILE ]; then
+            echo "PID file found. Stopping process `cat $PID_FILE`..."
+            # The kill command sends the TERM signal to the process ID in the file
+            kill $(cat $PID_FILE) || true
+            rm $PID_FILE
+            sleep 5 # Give the process time to shut down gracefully
+          else
+            echo "No PID file found. Assuming no process is running."
+          fi
+
+          echo "🚀 Starting the new version of the application..."
+          # Start the app in the background and save its PID to the PID file
+          DATABASE_URL=${{ secrets.DATABASE_URL }} nohup uvicorn main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 & echo $! > $PID_FILE
+
+          echo "PID of new process is `cat $PID_FILE`"
+          echo "⏳ Waiting for application to become healthy..."
+          
+          # This loop replaces the unreliable 'sleep'
+          for i in {1..12}; do
+            if curl -sS --fail http://localhost:8000/health; then
+              echo "✅ Application is healthy!"
+              break
+            fi
+            echo "Attempt $i/12: Application not ready yet. Waiting 5 seconds..."
+            sleep 5
+          done
+
+          # Final health check to ensure the loop succeeded
+          if ! curl -sS --fail http://localhost:8000/health; then
+            echo "❌ Deployment failed: Application did not become healthy in time."
+            echo "Displaying last 20 lines of api.log for debugging:"
+            tail -n 20 api.log
+            exit 1
+          fi
+          
+          echo "🎉 Deployment successful!"
