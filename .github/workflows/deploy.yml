@@ -56,62 +56,24 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         envs: DATABASE_URL
         script: |
-          echo "🚀 Starting deployment..."
-          
-          # Navigate to project directory
-          cd sentiment-analysis-api || exit 1
-          
-          # Pull latest changes
-          echo "📥 Pulling latest code..."
-          git pull origin main
-          
-          # Activate virtual environment
-          echo "🔧 Setting up environment..."
-          source ../sentiment_env/bin/activate
-          
-          # Install/update dependencies
-          echo "📦 Installing dependencies..."
-          pip install -r requirements.txt
-          
-          # Stop existing application
-          echo "🛑 Stopping existing application..."
-          sudo pkill -f "python main.py" || true
-          
-          # Wait a moment for graceful shutdown
-          sleep 5
-          
-          # Start new application with proper environment
-          echo "🚀 Starting new application..."
-          export DATABASE_URL="${{ secrets.DATABASE_URL }}"
-          source ../sentiment_env/bin/activate
-          nohup bash -c 'export DATABASE_URL="${{ secrets.DATABASE_URL }}"; source ../sentiment_env/bin/activate; python main.py' > api.log 2>&1 &
-          
-          # Wait for application to start
-          echo "⏳ Waiting for application to start..."
-          sleep 45
-          
-          # Test that application is healthy
-          echo "🔍 Testing application health..."
-          curl -f http://localhost:8000/health || exit 1
-          
-          # Test sentiment analysis endpoint
-          echo "🧪 Testing sentiment analysis..."
-          curl -X POST "http://localhost:8000/analyze" \
-               -H "Content-Type: application/json" \
-               -d '{"text": "Deployment successful!"}' || exit 1
-          
-          echo "✅ Deployment completed successfully!"
-      env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        
-    - name: Deployment Success Notification
-      if: success()
-      run: |
-        echo "✅ Deployment to production completed successfully!"
-        echo "🔗 API is running at: http://${{ secrets.EC2_HOST }}:8000"
-        
-    - name: Deployment Failure Notification
-      if: failure()
-      run: |
-        echo "❌ Deployment failed! Check the logs above."
-        exit 1
+        echo "🚀 Starting deployment..."
+        cd sentiment-analysis-api || exit 1
+        echo "📥 Pulling latest code..."
+        git pull origin main
+        echo "🔧 Setting up environment..."
+        source ../sentiment_env/bin/activate
+        echo "📦 Installing dependencies..."  
+        pip install -r requirements.txt
+        echo "🛑 Stopping existing application..."
+        sudo pkill -f "python main.py" || true
+        sleep 5
+        echo "🚀 Starting new application..."
+        source ../sentiment_env/bin/activate
+        nohup python main.py > api.log 2>&1 &
+        echo "⏳ Waiting for application to start..."
+        sleep 45
+        echo "🔍 Testing application health..."
+        curl -f http://localhost:8000/health || exit 1
+        echo "🧪 Testing sentiment analysis..."
+        curl -X POST "http://localhost:8000/analyze" -H "Content-Type: application/json" -d '{"text": "Deployment successful!"}' || exit 1
+        echo "✅ Deployment completed successfully!"
