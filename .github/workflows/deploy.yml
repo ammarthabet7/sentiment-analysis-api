@@ -56,24 +56,27 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         envs: DATABASE_URL
         script: |
-        echo "🚀 Starting deployment..."
-        cd sentiment-analysis-api || exit 1
-        echo "📥 Pulling latest code..."
-        git pull origin main
-        echo "🔧 Setting up environment..."
-        source ../sentiment_env/bin/activate
-        echo "📦 Installing dependencies..."  
-        pip install -r requirements.txt
-        echo "🛑 Stopping existing application..."
-        sudo pkill -f "python main.py" || true
-        sleep 5
-        echo "🚀 Starting new application..."
-        source ../sentiment_env/bin/activate
-        nohup python main.py > api.log 2>&1 &
-        echo "⏳ Waiting for application to start..."
-        sleep 45
-        echo "🔍 Testing application health..."
-        curl -f http://localhost:8000/health || exit 1
-        echo "🧪 Testing sentiment analysis..."
-        curl -X POST "http://localhost:8000/analyze" -H "Content-Type: application/json" -d '{"text": "Deployment successful!"}' || exit 1
-        echo "✅ Deployment completed successfully!"
+          echo "🚀 Starting deployment..."
+          cd sentiment-analysis-api || exit 1
+          echo "📥 Pulling latest code..."
+          git pull origin main
+          echo "🔧 Setting up environment..."
+          source ../sentiment_env/bin/activate
+          echo "📦 Installing dependencies..."  
+          pip install -r requirements.txt
+          echo "🛑 Stopping existing application..."
+          sudo pkill -f "python main.py" || true
+          sleep 5
+          echo "🚀 Starting new application..."
+          source ../sentiment_env/bin/activate
+          export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          nohup python main.py > api.log 2>&1 &
+          echo "⏳ Waiting for application to start..."
+          sleep 45
+          echo "🔍 Testing application health..."
+          curl -f http://localhost:8000/health || exit 1
+          echo "🧪 Testing sentiment analysis..."
+          curl -X POST "http://localhost:8000/analyze" -H "Content-Type: application/json" -d '{"text": "Deployment successful!"}' || exit 1
+          echo "✅ Deployment completed successfully!"
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
